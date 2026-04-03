@@ -3,282 +3,188 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DOCUMENT SCANNER</title>
+<title>SMART SCANNER PRO</title>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-/* BODY & GLOBAL */
-body {
-    font-family: Arial, sans-serif;
-    margin:0;
-    background:#f3f4f6; /* light background for readability */
-    color:#111827; /* dark text for contrast */
-}
+body { font-family: Arial; margin:0; background:#f3f4f6; color:#111827; transition:0.3s; }
+.dark { background:#0f172a; color:white; }
 
-/* HEADER */
-.header {
-    background:#3b82f6; /* bright blue header */
-    padding:15px;
-    display:flex;
-    align-items:center;
-}
-h3 {
-    margin:0;
-    font-weight:bold;
-    color:white; /* readable on blue header */
-}
-.menu-btn {
-    font-size:24px;
-    cursor:pointer;
-    margin-right:15px;
-    color:white;
-}
+.header { background:#3b82f6; padding:15px; display:flex; align-items:center; color:white; }
+.menu-btn { font-size:24px; cursor:pointer; margin-right:15px; }
 
-/* MENU */
-.menu {
-    position:fixed;
-    top:0;
-    left:-260px;
-    width:260px;
-    height:100%;
-    background:#e0f2fe; /* light blue menu */
-    transition:0.3s;
-    z-index:100;
-}
-.menu a {
-    display:block;
-    padding:15px;
-    color:#1e293b; /* dark text for contrast */
-    text-decoration:none;
-}
-.menu a:hover {
-    background:#3b82f6;
-    color:white;
-}
-
-/* CONTAINER & INPUTS */
 .container { padding:20px; }
-input, select {
-    width:100%;
-    padding:12px;
-    margin-top:10px;
-    border-radius:8px;
-    border:1px solid #cbd5e1; /* soft border */
-    background:#ffffff; /* bright input background */
-    color:#111827;
-}
-button {
-    width:100%;
-    padding:14px;
-    margin-top:10px;
-    border:none;
-    border-radius:8px;
-    background:#3b82f6; /* bright button */
-    color:white;
-    font-size:14px;
-    cursor:pointer;
-}
-button:hover { background:#2563eb; }
 
-/* IMAGES */
+input, select {
+width:100%; padding:12px; margin-top:10px;
+border-radius:8px; border:1px solid #ccc;
+}
+
+button {
+width:100%; padding:14px; margin-top:10px;
+border:none; border-radius:8px;
+background:#3b82f6; color:white;
+}
+
 img { width:100%; margin-top:10px; border-radius:10px; }
 
-/* PROGRESS TEXT */
-#progress { margin-top:10px; font-size:14px; color:#1e293b; font-weight:bold; }
-
-/* EDITABLE AREA */
 #editor {
-    width:100%;
-    min-height:250px;
-    margin-top:10px;
-    border-radius:8px;
-    background:#ffffff; /* bright editor background */
-    color:#111827; /* dark text */
-    padding:12px;
-    outline:none;
-    overflow:auto;
+background:white; padding:12px; margin-top:10px;
+min-height:250px; border-radius:8px;
 }
+
+.dark #editor { background:#1e293b; color:white; }
 </style>
 </head>
 
 <body>
 
 <div class="header">
-    <div class="menu-btn" onclick="toggleMenu()">☰</div>
-    <h3>DOCUMENT SCANNER</h3>
-</div>
-
-<div id="menu" class="menu">
-    <a href="#" onclick="closeMenu()">⬅ BACK</a>
-    <a href="#" onclick="shareApp()">📤 SHARE APP</a>
-    <a href="#" onclick="callSupport()">📞 CONTACT</a>
-    <a href="#" onclick="exitApp()">🚪 EXIT</a>
+<div class="menu-btn" onclick="toggleDark()">🌙</div>
+<h3>SMART SCANNER PRO</h3>
 </div>
 
 <div class="container">
 
-<input type="file" accept="image/*" capture="environment" id="imageInput" onchange="previewAndCrop()">
+<input type="file" accept="image/*" capture="environment" id="imageInput" onchange="previewImage()">
+
 <img id="preview" style="display:none;">
+
 <select id="lang">
-    <option value="eng">English</option>
-    <option value="swa">Swahili</option>
+<option value="eng">English</option>
+<option value="swa">Swahili</option>
 </select>
 
-<button onclick="extractText()">SCAN TEXT</button>
+<button onclick="scan()">📸 SCAN FAST</button>
+
 <div id="progress"></div>
 
-<!-- EDITABLE WORD-LIKE AREA -->
-<div id="editor" contenteditable="true" placeholder="TEXT ITAONEKANA HAPA..."></div>
+<div id="editor" contenteditable="true"></div>
 
-<button onclick="saveDocument()">SAVE DOCUMENT</button>
-<button onclick="shareDocument()">SHARE DOCUMENT</button>
-<button onclick="downloadPDF()">SAVE AS PDF</button>
-<button onclick="downloadWord()">SAVE AS WORD</button>
+<button onclick="saveLocal()">💾 SAVE</button>
+<button onclick="shareDoc()">📤 SHARE</button>
+<button onclick="downloadPDF()">📄 PDF</button>
+<button onclick="callSupport()">📞 CONTACT</button>
 
 </div>
 
 <script>
-// MENU FUNCTIONS
-function toggleMenu() { document.getElementById("menu").style.left = "0px"; }
-function closeMenu() { document.getElementById("menu").style.left = "-260px"; }
 
-// SUPPORT & SHARE
-function callSupport() { if (confirm("Piga support 0672628000?")) window.location.href="tel:0672628000"; }
-function shareApp() { if(navigator.share){ navigator.share({title:"Scanner App", text:"Jaribu app hii", url:window.location.href}); }else{alert("Sharing not supported");} }
-function exitApp() { if(confirm("Toka?")) window.close(); }
-
-// IMAGE PREVIEW & AUTO CROP
-function previewAndCrop(){
-    let file=document.getElementById("imageInput").files[0];
-    if(!file) return;
-
-    let preview=document.getElementById("preview");
-    let img=new Image();
-    img.onload=function(){
-        let canvas=document.createElement("canvas");
-        let ctx=canvas.getContext("2d");
-        canvas.width=img.width; canvas.height=img.height;
-        ctx.drawImage(img,0,0);
-
-        let data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
-        let top=0, bottom=canvas.height;
-
-        for(let y=0;y<canvas.height;y++){
-            let empty=true;
-            for(let x=0;x<canvas.width;x++){
-                let i=(y*canvas.width+x)*4;
-                if(data[i]<250){ empty=false; break; }
-            }
-            if(!empty){ top=y; break; }
-        }
-
-        for(let y=canvas.height-1;y>=0;y--){
-            let empty=true;
-            for(let x=0;x<canvas.width;x++){
-                let i=(y*canvas.width+x)*4;
-                if(data[i]<250){ empty=false; break; }
-            }
-            if(!empty){ bottom=y; break; }
-        }
-
-        let cropHeight=bottom-top;
-        let croppedCanvas=document.createElement("canvas");
-        let cctx=croppedCanvas.getContext("2d");
-        croppedCanvas.width=canvas.width;
-        croppedCanvas.height=cropHeight;
-        cctx.drawImage(img,0,top,canvas.width,cropHeight,0,0,canvas.width,cropHeight);
-
-        preview.src=croppedCanvas.toDataURL();
-        preview.style.display="block";
-        croppedCanvas.toBlob(blob=>{document.croppedImage=blob;});
-    };
-    img.src=URL.createObjectURL(file);
+// 🌙 DARK MODE
+function toggleDark(){
+document.body.classList.toggle("dark");
 }
 
-// OCR FUNCTION - Instant editable
-function extractText(){
-    let file=document.croppedImage||document.getElementById("imageInput").files[0];
-    if(!file) return alert("Chagua picha");
-    let lang=document.getElementById("lang").value;
-    let editor=document.getElementById("editor");
-    editor.innerText="";  // clear previous
-    document.getElementById("progress").innerText="Processing: 0%";
+// 📸 PREVIEW + COMPRESS IMAGE
+function previewImage(){
+let file=document.getElementById("imageInput").files[0];
+if(!file) return;
 
-    const worker=Tesseract.createWorker({
-        logger: m=>{
-            if(m.status==="recognizing text"){
-                document.getElementById("progress").innerText="Processing: "+Math.round(m.progress*100)+"%";
-            }
-        }
-    });
+let img=new Image();
+img.onload=function(){
+let canvas=document.createElement("canvas");
+let ctx=canvas.getContext("2d");
 
-    (async ()=>{
-        await worker.load();
-        await worker.loadLanguage(lang);
-        await worker.initialize(lang);
-        const {data:{text}}=await worker.recognize(file);
-        editor.innerText=text;  // direct editable
-        document.getElementById("progress").innerText="Done ✔";
-        await worker.terminate();
-        editor.focus();
-    })();
+// compress image
+let scale=0.6;
+canvas.width=img.width*scale;
+canvas.height=img.height*scale;
+
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+document.getElementById("preview").src=canvas.toDataURL("image/jpeg",0.7);
+document.getElementById("preview").style.display="block";
+
+// save compressed
+canvas.toBlob(blob=>{
+document.compressedImage=blob;
+},"image/jpeg",0.7);
+
+};
+img.src=URL.createObjectURL(file);
 }
 
-// SAVE DOCUMENT AS TXT
-function saveDocument(){
-    let text=document.getElementById("editor").innerText;
-    if(!text) return alert("No text to save");
-    let name=prompt("Enter document name","document.txt");
-    if(!name) return;
-    let blob=new Blob([text],{type:"text/plain"});
-    let link=document.createElement("a");
-    link.href=URL.createObjectURL(blob);
-    link.download=name;
-    link.click();
+// ⚡ FAST OCR ONLINE
+async function scan(){
+let file=document.compressedImage || document.getElementById("imageInput").files[0];
+if(!file) return alert("Chagua picha");
+
+document.getElementById("progress").innerText="Scanning...";
+
+let formData=new FormData();
+formData.append("file",file);
+formData.append("apikey","a8945c67e588957"); // API KEY YAKO TAYARI
+formData.append("language",document.getElementById("lang").value);
+
+let res=await fetch("https://api.ocr.space/parse/image",{
+method:"POST",
+body:formData
+});
+
+let data=await res.json();
+
+if(data.ParsedResults){
+let text=data.ParsedResults[0].ParsedText;
+document.getElementById("editor").innerText=text;
+localStorage.setItem("doc",text);
+document.getElementById("progress").innerText="Done ✔";
+}else{
+document.getElementById("progress").innerText="Error";
+}
 }
 
-// SHARE DOCUMENT
-function shareDocument(){
-    let text=document.getElementById("editor").innerText;
-    if(!text) return alert("No text to share");
-    let blob=new Blob([text],{type:"text/plain"});
-    let file=new File([blob],"document.txt");
-    if(navigator.share){ navigator.share({title:"Document", files:[file]}); }else{alert("Sharing not supported");}
+// 💾 AUTO LOAD
+window.onload=function(){
+let saved=localStorage.getItem("doc");
+if(saved) document.getElementById("editor").innerText=saved;
 }
 
-// DOWNLOAD PDF
+// SAVE
+function saveLocal(){
+let text=document.getElementById("editor").innerText;
+localStorage.setItem("doc",text);
+alert("Saved ✔");
+}
+
+// SHARE
+function shareDoc(){
+let text=document.getElementById("editor").innerText;
+let blob=new Blob([text],{type:"text/plain"});
+let file=new File([blob],"doc.txt");
+
+if(navigator.share){
+navigator.share({files:[file],title:"Document"});
+}else{
+alert("Sharing not supported");
+}
+}
+
+// PDF
 function downloadPDF(){
-    let text=document.getElementById("editor").innerText;
-    if(!text) return alert("No text for PDF");
-    let {jsPDF}=window.jspdf;
-    let doc=new jsPDF("p","mm","a4");
-    let lines=doc.splitTextToSize(text,180);
-    let y=10;
-    lines.forEach(line=>{
-        if(y>280){ doc.addPage(); y=10; }
-        doc.text(line,10,y);
-        y+=7;
-    });
-    let name=prompt("Enter PDF name","document.pdf");
-    if(!name) return;
-    doc.save(name);
+let {jsPDF}=window.jspdf;
+let doc=new jsPDF();
+let text=document.getElementById("editor").innerText;
+
+let lines=doc.splitTextToSize(text,180);
+let y=10;
+
+lines.forEach(line=>{
+if(y>280){ doc.addPage(); y=10; }
+doc.text(line,10,y);
+y+=7;
+});
+
+doc.save("document.pdf");
 }
 
-// DOWNLOAD WORD
-function downloadWord(){
-    let text=document.getElementById("editor").innerHTML;
-    if(!text) return alert("No text for Word");
-    let html=`<html><body><div style="width:210mm;height:297mm;padding:25px;">${text}</div></body></html>`;
-    let blob=new Blob([html],{type:"application/msword"});
-    let name=prompt("Enter Word name","document.doc");
-    if(!name) return;
-    let link=document.createElement("a");
-    link.href=URL.createObjectURL(blob);
-    link.download=name;
-    link.click();
+// CONTACT
+function callSupport(){
+if(confirm("Piga support 0672628000?")){
+window.location.href="tel:0672628000";
 }
+}
+
 </script>
 
 </body>

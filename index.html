@@ -9,20 +9,97 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body { font-family: Arial, sans-serif; margin:0; background:#1e293b; color:white; }
-.header { background:#0f172a; padding:15px; display:flex; align-items:center; }
-.menu-btn { font-size:24px; cursor:pointer; margin-right:15px; }
-h3 { margin:0; font-weight:bold; color:#f1f5f9; }
-.menu { position:fixed; top:0; left:-260px; width:260px; height:100%; background:#111827; transition:0.3s; z-index:100; }
-.menu a { display:block; padding:15px; color:white; text-decoration:none; }
-.menu a:hover { background:#3b82f6; }
+/* BODY & GLOBAL */
+body {
+    font-family: Arial, sans-serif;
+    margin:0;
+    background:#f3f4f6; /* light background for readability */
+    color:#111827; /* dark text for contrast */
+}
+
+/* HEADER */
+.header {
+    background:#3b82f6; /* bright blue header */
+    padding:15px;
+    display:flex;
+    align-items:center;
+}
+h3 {
+    margin:0;
+    font-weight:bold;
+    color:white; /* readable on blue header */
+}
+.menu-btn {
+    font-size:24px;
+    cursor:pointer;
+    margin-right:15px;
+    color:white;
+}
+
+/* MENU */
+.menu {
+    position:fixed;
+    top:0;
+    left:-260px;
+    width:260px;
+    height:100%;
+    background:#e0f2fe; /* light blue menu */
+    transition:0.3s;
+    z-index:100;
+}
+.menu a {
+    display:block;
+    padding:15px;
+    color:#1e293b; /* dark text for contrast */
+    text-decoration:none;
+}
+.menu a:hover {
+    background:#3b82f6;
+    color:white;
+}
+
+/* CONTAINER & INPUTS */
 .container { padding:20px; }
-input, select { width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; background:#0f172a; color:white; }
-textarea { width:100%; height:250px; padding:12px; margin-top:10px; border-radius:8px; background:#0f172a; color:white; resize: vertical; }
-button { width:100%; padding:14px; margin-top:10px; border:none; border-radius:8px; background:#3b82f6; color:white; font-size:14px; cursor:pointer; }
+input, select {
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border-radius:8px;
+    border:1px solid #cbd5e1; /* soft border */
+    background:#ffffff; /* bright input background */
+    color:#111827;
+}
+button {
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    border:none;
+    border-radius:8px;
+    background:#3b82f6; /* bright button */
+    color:white;
+    font-size:14px;
+    cursor:pointer;
+}
 button:hover { background:#2563eb; }
+
+/* IMAGES */
 img { width:100%; margin-top:10px; border-radius:10px; }
-#progress { margin-top:10px; font-size:14px; }
+
+/* PROGRESS TEXT */
+#progress { margin-top:10px; font-size:14px; color:#1e293b; font-weight:bold; }
+
+/* EDITABLE AREA */
+#editor {
+    width:100%;
+    min-height:250px;
+    margin-top:10px;
+    border-radius:8px;
+    background:#ffffff; /* bright editor background */
+    color:#111827; /* dark text */
+    padding:12px;
+    outline:none;
+    overflow:auto;
+}
 </style>
 </head>
 
@@ -51,7 +128,9 @@ img { width:100%; margin-top:10px; border-radius:10px; }
 
 <button onclick="extractText()">SCAN TEXT</button>
 <div id="progress"></div>
-<textarea id="output" placeholder="TEXT ITAONEKANA HAPA..."></textarea>
+
+<!-- EDITABLE WORD-LIKE AREA -->
+<div id="editor" contenteditable="true" placeholder="TEXT ITAONEKANA HAPA..."></div>
 
 <button onclick="saveDocument()">SAVE DOCUMENT</button>
 <button onclick="shareDocument()">SHARE DOCUMENT</button>
@@ -118,29 +197,41 @@ function previewAndCrop(){
     img.src=URL.createObjectURL(file);
 }
 
-// OCR FUNCTION
+// OCR FUNCTION - Instant editable
 function extractText(){
     let file=document.croppedImage||document.getElementById("imageInput").files[0];
-    let lang=document.getElementById("lang").value;
     if(!file) return alert("Chagua picha");
+    let lang=document.getElementById("lang").value;
+    let editor=document.getElementById("editor");
+    editor.innerText="";  // clear previous
     document.getElementById("progress").innerText="Processing: 0%";
-    Tesseract.recognize(file, lang, { 
-        logger: m=>{ if(m.status==="recognizing text"){ document.getElementById("progress").innerText="Processing: "+Math.round(m.progress*100)+"%"; } } 
-    }).then(({data:{text}})=>{
-        document.getElementById("output").value=text;
-        document.getElementById("progress").innerText="Done ✔";
+
+    const worker=Tesseract.createWorker({
+        logger: m=>{
+            if(m.status==="recognizing text"){
+                document.getElementById("progress").innerText="Processing: "+Math.round(m.progress*100)+"%";
+            }
+        }
     });
+
+    (async ()=>{
+        await worker.load();
+        await worker.loadLanguage(lang);
+        await worker.initialize(lang);
+        const {data:{text}}=await worker.recognize(file);
+        editor.innerText=text;  // direct editable
+        document.getElementById("progress").innerText="Done ✔";
+        await worker.terminate();
+        editor.focus();
+    })();
 }
 
-// SAVE DOCUMENT
+// SAVE DOCUMENT AS TXT
 function saveDocument(){
-    let text=document.getElementById("output").value;
+    let text=document.getElementById("editor").innerText;
     if(!text) return alert("No text to save");
     let name=prompt("Enter document name","document.txt");
     if(!name) return;
-    localStorage.setItem(name,text);
-    alert("Document saved ✔");
-
     let blob=new Blob([text],{type:"text/plain"});
     let link=document.createElement("a");
     link.href=URL.createObjectURL(blob);
@@ -150,7 +241,7 @@ function saveDocument(){
 
 // SHARE DOCUMENT
 function shareDocument(){
-    let text=document.getElementById("output").value;
+    let text=document.getElementById("editor").innerText;
     if(!text) return alert("No text to share");
     let blob=new Blob([text],{type:"text/plain"});
     let file=new File([blob],"document.txt");
@@ -159,13 +250,17 @@ function shareDocument(){
 
 // DOWNLOAD PDF
 function downloadPDF(){
-    let text=document.getElementById("output").value;
+    let text=document.getElementById("editor").innerText;
     if(!text) return alert("No text for PDF");
     let {jsPDF}=window.jspdf;
     let doc=new jsPDF("p","mm","a4");
     let lines=doc.splitTextToSize(text,180);
     let y=10;
-    lines.forEach(line=>{ if(y>280){ doc.addPage(); y=10; } doc.text(line,10,y); y+=7; });
+    lines.forEach(line=>{
+        if(y>280){ doc.addPage(); y=10; }
+        doc.text(line,10,y);
+        y+=7;
+    });
     let name=prompt("Enter PDF name","document.pdf");
     if(!name) return;
     doc.save(name);
@@ -173,9 +268,9 @@ function downloadPDF(){
 
 // DOWNLOAD WORD
 function downloadWord(){
-    let text=document.getElementById("output").value;
+    let text=document.getElementById("editor").innerHTML;
     if(!text) return alert("No text for Word");
-    let html=`<html><body><div style="width:210mm;height:297mm;padding:25px;">${text.replace(/\n/g,"<br>")}</div></body></html>`;
+    let html=`<html><body><div style="width:210mm;height:297mm;padding:25px;">${text}</div></body></html>`;
     let blob=new Blob([html],{type:"application/msword"});
     let name=prompt("Enter Word name","document.doc");
     if(!name) return;

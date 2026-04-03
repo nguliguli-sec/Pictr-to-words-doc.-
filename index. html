@@ -3,288 +3,185 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CHANGE PICTURE TO MICROSOFT WORDS</title>
+<title>DOCUMENT SCANNER</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body { font-family: Arial; margin: 0; background: #f5f5f5; }
-
-.header {
-    background: #111; color: white; padding: 15px;
-    display: flex; align-items: center;
-}
-
-.menu-btn { font-size: 26px; cursor: pointer; margin-right: 15px; }
-
-h3 { margin: 0; font-size: 16px; letter-spacing: 1px; }
-
-.menu {
-    position: fixed; top: 0; left: -260px;
-    width: 260px; height: 100%;
-    background: #222; color: white;
-    padding-top: 20px; transition: 0.3s;
-}
-
-.menu a {
-    display: block; padding: 15px;
-    color: white; text-decoration: none;
-    border-bottom: 1px solid #444;
-}
-
-.menu a:hover { background: #444; }
-
-.container { padding: 20px; }
-
-input, select {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-}
-
-textarea {
-    width: 100%;
-    height: 300px;
-    padding: 10px;
-    margin-top: 10px;
-}
-
-button {
-    padding: 12px;
-    margin-top: 10px;
-    width: 100%;
-    border: none;
-    background: #111;
-    color: white;
-    border-radius: 5px;
-}
-
-button:hover { background: #333; }
-
-img {
-    width: 100%;
-    margin-top: 10px;
-    border-radius: 5px;
-}
-
-#progress {
-    margin-top: 10px;
-    font-size: 14px;
-}
+body { font-family: Arial, sans-serif; margin:0; background:#1e293b; color:white; }
+.header { background:#0f172a; padding:15px; display:flex; align-items:center; }
+.menu-btn { font-size:24px; cursor:pointer; margin-right:15px; }
+h3 { margin:0; font-weight:bold; color:#f1f5f9; }
+.menu { position:fixed; top:0; left:-260px; width:260px; height:100%; background:#111827; transition:0.3s; z-index:100; }
+.menu a { display:block; padding:15px; color:white; text-decoration:none; }
+.menu a:hover { background:#3b82f6; }
+.container { padding:20px; }
+input, select { width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; background:#0f172a; color:white; }
+textarea { width:100%; height:250px; padding:12px; margin-top:10px; border-radius:8px; background:#0f172a; color:white; resize: vertical; }
+button { width:100%; padding:14px; margin-top:10px; border:none; border-radius:8px; background:#3b82f6; color:white; font-size:14px; cursor:pointer; }
+button:hover { background:#2563eb; }
+img { width:100%; margin-top:10px; border-radius:10px; }
+#progress { margin-top:10px; font-size:14px; }
 </style>
 </head>
 
-<body onload="loadDocument()">
+<body>
 
 <div class="header">
-    <div class="menu-btn" onclick="openMenu()">☰</div>
-    <h3>CHANGE PICTURE TO MICROSOFT WORDS</h3>
+    <div class="menu-btn" onclick="toggleMenu()">☰</div>
+    <h3>DOCUMENT SCANNER</h3>
 </div>
 
 <div id="menu" class="menu">
-    <a href="#">⚙ SETTINGS</a>
+    <a href="#" onclick="closeMenu()">⬅ BACK</a>
     <a href="#" onclick="shareApp()">📤 SHARE APP</a>
-    <a href="#" onclick="callSupport()">📞 CONTACT SUPPORT</a>
+    <a href="#" onclick="callSupport()">📞 CONTACT</a>
     <a href="#" onclick="exitApp()">🚪 EXIT</a>
 </div>
 
 <div class="container">
 
-<input type="file" accept="image/*" capture="environment" id="imageInput" onchange="previewImage()">
-
+<input type="file" accept="image/*" capture="environment" id="imageInput" onchange="previewAndCrop()">
 <img id="preview" style="display:none;">
-
 <select id="lang">
     <option value="eng">English</option>
     <option value="swa">Swahili</option>
 </select>
 
-<button onclick="extractText()">CONVERT IMAGE TO TEXT</button>
-
+<button onclick="extractText()">SCAN TEXT</button>
 <div id="progress"></div>
-
 <textarea id="output" placeholder="TEXT ITAONEKANA HAPA..."></textarea>
 
-<button onclick="clearText()">CLEAR TEXT</button>
 <button onclick="saveDocument()">SAVE DOCUMENT</button>
-<button onclick="loadDocument()">LOAD SAVED</button>
 <button onclick="shareDocument()">SHARE DOCUMENT</button>
-<button onclick="downloadPDF()">DOWNLOAD PDF</button>
-<button onclick="downloadWord()">DOWNLOAD WORD</button>
+<button onclick="downloadPDF()">SAVE AS PDF</button>
+<button onclick="downloadWord()">SAVE AS WORD</button>
 
 </div>
 
 <script>
-function openMenu() {
-    let menu = document.getElementById("menu");
-    menu.style.left = (menu.style.left === "0px") ? "-260px" : "0px";
-}
+// MENU FUNCTIONS
+function toggleMenu() { document.getElementById("menu").style.left = "0px"; }
+function closeMenu() { document.getElementById("menu").style.left = "-260px"; }
 
-function callSupport() {
-    if (confirm("Piga support 0672628000?")) {
-        window.location.href = "tel:0672628000";
-    }
-}
+// SUPPORT & SHARE
+function callSupport() { if (confirm("Piga support 0672628000?")) window.location.href="tel:0672628000"; }
+function shareApp() { if(navigator.share){ navigator.share({title:"Scanner App", text:"Jaribu app hii", url:window.location.href}); }else{alert("Sharing not supported");} }
+function exitApp() { if(confirm("Toka?")) window.close(); }
 
-function shareApp() {
-    if (navigator.share) {
-        navigator.share({
-            title: "App",
-            text: "Jaribu app hii",
-            url: window.location.href
-        });
-    } else {
-        alert("Sharing not supported");
-    }
-}
+// IMAGE PREVIEW & AUTO CROP
+function previewAndCrop(){
+    let file=document.getElementById("imageInput").files[0];
+    if(!file) return;
 
-function exitApp() {
-    if (confirm("UNATAKA KUTOKA?")) {
-        window.close();
-    }
-}
+    let preview=document.getElementById("preview");
+    let img=new Image();
+    img.onload=function(){
+        let canvas=document.createElement("canvas");
+        let ctx=canvas.getContext("2d");
+        canvas.width=img.width; canvas.height=img.height;
+        ctx.drawImage(img,0,0);
 
-// AUTO CROP + PREVIEW
-function previewImage() {
-    let file = document.getElementById("imageInput").files[0];
-    let preview = document.getElementById("preview");
+        let data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+        let top=0, bottom=canvas.height;
 
-    let img = new Image();
-    img.onload = function () {
-        let canvas = document.createElement("canvas");
-        let ctx = canvas.getContext("2d");
-
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-
-        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let data = imageData.data;
-
-        let top = 0, bottom = canvas.height;
-
-        for (let y = 0; y < canvas.height; y++) {
-            let isWhite = true;
-            for (let x = 0; x < canvas.width; x++) {
-                let i = (y * canvas.width + x) * 4;
-                if (data[i] < 200) { isWhite = false; break; }
+        for(let y=0;y<canvas.height;y++){
+            let empty=true;
+            for(let x=0;x<canvas.width;x++){
+                let i=(y*canvas.width+x)*4;
+                if(data[i]<250){ empty=false; break; }
             }
-            if (!isWhite) { top = y; break; }
+            if(!empty){ top=y; break; }
         }
 
-        for (let y = canvas.height - 1; y >= 0; y--) {
-            let isWhite = true;
-            for (let x = 0; x < canvas.width; x++) {
-                let i = (y * canvas.width + x) * 4;
-                if (data[i] < 200) { isWhite = false; break; }
+        for(let y=canvas.height-1;y>=0;y--){
+            let empty=true;
+            for(let x=0;x<canvas.width;x++){
+                let i=(y*canvas.width+x)*4;
+                if(data[i]<250){ empty=false; break; }
             }
-            if (!isWhite) { bottom = y; break; }
+            if(!empty){ bottom=y; break; }
         }
 
-        canvas.height = bottom - top;
-        ctx.drawImage(img, 0, top, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+        let cropHeight=bottom-top;
+        let croppedCanvas=document.createElement("canvas");
+        let cctx=croppedCanvas.getContext("2d");
+        croppedCanvas.width=canvas.width;
+        croppedCanvas.height=cropHeight;
+        cctx.drawImage(img,0,top,canvas.width,cropHeight,0,0,canvas.width,cropHeight);
 
-        preview.src = canvas.toDataURL();
-        preview.style.display = "block";
-
-        canvas.toBlob(blob => {
-            document.croppedImage = blob;
-        });
+        preview.src=croppedCanvas.toDataURL();
+        preview.style.display="block";
+        croppedCanvas.toBlob(blob=>{document.croppedImage=blob;});
     };
-    img.src = URL.createObjectURL(file);
+    img.src=URL.createObjectURL(file);
 }
 
-// OCR
-function extractText() {
-    const file = document.croppedImage || document.getElementById("imageInput").files[0];
-    const lang = document.getElementById("lang").value;
-
-    if (!file) return alert("CHAGUA PICHA KWANZA");
-
-    Tesseract.recognize(file, lang, {
-        logger: m => {
-            if (m.status === "recognizing text") {
-                document.getElementById("progress").innerText =
-                    "Processing: " + Math.round(m.progress * 100) + "%";
-            }
-        }
-    }).then(({ data: { text } }) => {
-        document.getElementById("output").value = text;
-        document.getElementById("progress").innerText = "DONE ✅";
+// OCR FUNCTION
+function extractText(){
+    let file=document.croppedImage||document.getElementById("imageInput").files[0];
+    let lang=document.getElementById("lang").value;
+    if(!file) return alert("Chagua picha");
+    document.getElementById("progress").innerText="Processing: 0%";
+    Tesseract.recognize(file, lang, { 
+        logger: m=>{ if(m.status==="recognizing text"){ document.getElementById("progress").innerText="Processing: "+Math.round(m.progress*100)+"%"; } } 
+    }).then(({data:{text}})=>{
+        document.getElementById("output").value=text;
+        document.getElementById("progress").innerText="Done ✔";
     });
 }
 
-function clearText() {
-    document.getElementById("output").value = "";
-}
-
-// SAVE
-function saveDocument() {
-    let text = document.getElementById("output").value;
-    localStorage.setItem("savedDoc", text);
+// SAVE DOCUMENT
+function saveDocument(){
+    let text=document.getElementById("output").value;
+    if(!text) return alert("No text to save");
+    let name=prompt("Enter document name","document.txt");
+    if(!name) return;
+    localStorage.setItem(name,text);
     alert("Document saved ✔");
-}
 
-function loadDocument() {
-    let text = localStorage.getItem("savedDoc");
-    if (text) document.getElementById("output").value = text;
+    let blob=new Blob([text],{type:"text/plain"});
+    let link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download=name;
+    link.click();
 }
 
 // SHARE DOCUMENT
-function shareDocument() {
-    let text = document.getElementById("output").value;
-    let blob = new Blob([text], { type: "text/plain" });
-    let file = new File([blob], "document.txt");
-
-    if (navigator.share) {
-        navigator.share({
-            title: "Document",
-            files: [file]
-        });
-    } else {
-        alert("Sharing not supported");
-    }
+function shareDocument(){
+    let text=document.getElementById("output").value;
+    if(!text) return alert("No text to share");
+    let blob=new Blob([text],{type:"text/plain"});
+    let file=new File([blob],"document.txt");
+    if(navigator.share){ navigator.share({title:"Document", files:[file]}); }else{alert("Sharing not supported");}
 }
 
-// PDF
-function downloadPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("p", "mm", "a4");
-
-    let text = document.getElementById("output").value;
-    let lines = doc.splitTextToSize(text, 180);
-
-    let y = 10;
-    lines.forEach(line => {
-        if (y > 280) {
-            doc.addPage();
-            y = 10;
-        }
-        doc.text(line, 10, y);
-        y += 7;
-    });
-
-    doc.save("document.pdf");
+// DOWNLOAD PDF
+function downloadPDF(){
+    let text=document.getElementById("output").value;
+    if(!text) return alert("No text for PDF");
+    let {jsPDF}=window.jspdf;
+    let doc=new jsPDF("p","mm","a4");
+    let lines=doc.splitTextToSize(text,180);
+    let y=10;
+    lines.forEach(line=>{ if(y>280){ doc.addPage(); y=10; } doc.text(line,10,y); y+=7; });
+    let name=prompt("Enter PDF name","document.pdf");
+    if(!name) return;
+    doc.save(name);
 }
 
-// WORD
-function downloadWord() {
-    let text = document.getElementById("output").value;
-
-    let html = `
-    <html><body>
-    <div style="width:210mm;height:297mm;padding:25px;">
-    ${text.replace(/\n/g,"<br>")}
-    </div>
-    </body></html>
-    `;
-
-    let blob = new Blob([html], {type:"application/msword"});
-    let link = document.createElement("a");
-
-    link.href = URL.createObjectURL(blob);
-    link.download = "document.doc";
+// DOWNLOAD WORD
+function downloadWord(){
+    let text=document.getElementById("output").value;
+    if(!text) return alert("No text for Word");
+    let html=`<html><body><div style="width:210mm;height:297mm;padding:25px;">${text.replace(/\n/g,"<br>")}</div></body></html>`;
+    let blob=new Blob([html],{type:"application/msword"});
+    let name=prompt("Enter Word name","document.doc");
+    if(!name) return;
+    let link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download=name;
     link.click();
 }
 </script>
